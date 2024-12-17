@@ -1,0 +1,69 @@
+name: CI/CD Pipeline with Deployment
+
+on:
+  push:
+    branches:
+      - main  # Trigger pipeline on changes to the main branch
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python
+      - name: Set up Python environment
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      # Install dependencies
+      - name: Install project dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Detect the latest model version
+      - name: Detect latest model version
+        id: detect_model_version
+        run: |
+          echo "DEBUG: Detecting the latest model version..."
+          latest_version=$(ls -d v*/ | sort -r | head -n 1 | cut -d'/' -f1)
+          if [ -z "$latest_version" ]; then
+            echo "No model versions found! Exiting."
+            exit 1
+          fi
+          echo "Detected latest model version: $latest_version"
+          echo "MODEL_VERSION=$latest_version" >> $GITHUB_ENV
+        shell: bash
+
+      # Debug detected model version
+      - name: Debug model version
+        run: |
+          echo "DEBUG: Using model version: ${{ env.MODEL_VERSION }}"
+          echo "DEBUG: Listing files in the repository:"
+          ls -R
+
+      # Run unit tests
+      - name: Run unit tests
+        env:
+          MODEL_VERSION: ${{ env.MODEL_VERSION }}
+        run: |
+          pytest tests/
+
+      # Save the latest model version as an artifact
+      - name: Save model artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: latest-model-artifact
+          path: ${{ env.MODEL_VERSION }}/
+
+      # Deploy to Streamlit Cloud
+      - name: Deploy to Streamlit
+        run: |
+          echo "Deploying to Streamlit Cloud..."

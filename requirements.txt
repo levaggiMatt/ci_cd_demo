@@ -1,0 +1,5 @@
+pandas        # Data manipulation
+scikit-learn  # Machine learning
+pytest        # Testing
+joblib        # Model saving/loading
+streamlit     # Web apps
